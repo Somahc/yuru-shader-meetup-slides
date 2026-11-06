@@ -2,15 +2,27 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { Pane } from 'tweakpane'
-import fragmentShader from '../shaders/scanlines.frag?raw'
 import { drawPM5544 } from './pm5544'
+import { demos, type Demo, type DemoName } from './demos'
+import { extractRegion, highlightGlsl } from './highlight'
 
+// codeFontSize: コード欄の文字サイズ（例: "11px"）。省略すると Slidev の既定値。
+// Slidev は .slidev-code の font-size を !important で変数から決めるので、変数のほうを差し替える。
+const props = defineProps<{ demo: DemoName, codeFontSize?: string }>()
 const viewport = ref<HTMLDivElement>()
 const controls = ref<HTMLDivElement>()
 const error = ref('')
-const defaults = { density: 100, strength: 0.65, speed: 0.8, vertical: false, enabled: true, paused: false }
-const params = { ...defaults }
+const codeHtml = ref('')
+const { shader: fragmentShader, params: paramDefs, feedback = false, testCard = true }: Demo = demos[props.demo]
+const defaults: Record<string, number | boolean> = Object.fromEntries(
+  Object.entries(paramDefs).map(([key, def]) => [key, def.value]),
+)
+const params = { ...defaults, paused: false }
+const uniformName = (key: string) => `u${key[0].toUpperCase()}${key.slice(1)}`
 let dispose = () => {}
+
+// 右側に表示するコード。シェーダーの `#region main` の範囲だけを出す。
+highlightGlsl(extractRegion(fragmentShader, 'main')).then((html) => { codeHtml.value = html })
 
 onMounted(() => {
   let renderer: THREE.WebGLRenderer
@@ -33,11 +45,10 @@ onMounted(() => {
   drawPM5544(source.getContext('2d')!, source.width, source.height)
     .then(() => { texture.needsUpdate = true })
     .catch((e: Error) => { error.value = e.message })
-  const uniforms = {
+  const uniforms: Record<string, THREE.IUniform> = {
     uSource: { value: texture }, uTime: { value: 0 },
-    uDensity: { value: params.density }, uStrength: { value: params.strength },
-    uSpeed: { value: params.speed }, uVertical: { value: params.vertical },
-    uEnabled: { value: params.enabled },
+    uResolution: { value: new THREE.Vector2(1, 1) }, uBackbuffer: { value: null },
+    ...Object.fromEntries(Object.keys(defaults).map(key => [uniformName(key), { value: params[key] }])),
   }
   const material = new THREE.ShaderMaterial({
     uniforms, fragmentShader,
@@ -48,16 +59,51 @@ onMounted(() => {
   const scene = new THREE.Scene()
   scene.add(new THREE.Mesh(geometry, material))
   const camera = new THREE.Camera()
+
+  // Video Feedback 用。2枚のレンダーターゲットを交互に使い、前フレームの出力を読めるようにする。
+  // Shadertoy のバッファと同じく、1.0 を超える値も保持できる半精度浮動小数点で持つ。
+  const targets = feedback
+    ? [0, 1].map(() => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false }))
+    : []
+  const copyMaterial = new THREE.ShaderMaterial({
+    uniforms: { tSource: { value: null } },
+    vertexShader: material.vertexShader,
+    fragmentShader: 'uniform sampler2D tSource; varying vec2 vUv; void main() { gl_FragColor = texture2D(tSource, vUv); }',
+    depthTest: false, depthWrite: false,
+  })
+  const copyScene = new THREE.Scene()
+  copyScene.add(new THREE.Mesh(geometry, copyMaterial))
+  const clearTargets = () => {
+    for (const target of targets) { renderer.setRenderTarget(target); renderer.clear() }
+    renderer.setRenderTarget(null)
+  }
+  const render = () => {
+    if (!feedback) { renderer.render(scene, camera); return }
+    const [read, write] = targets
+    // 一時停止中は前フレームを描き直すだけにして、フィードバックを進めない。
+    if (!params.paused) {
+      uniforms.uBackbuffer.value = read.texture
+      renderer.setRenderTarget(write)
+      renderer.render(scene, camera)
+      renderer.setRenderTarget(null)
+      targets.reverse()
+    }
+    copyMaterial.uniforms.tSource.value = targets[0].texture
+    renderer.render(copyScene, camera)
+  }
   const pane = new Pane({ container: controls.value!, title: 'Parameters' })
-  pane.addBinding(params, 'density', { label: 'Density', min: 4, max: 240, step: 1 })
-  pane.addBinding(params, 'strength', { label: 'Strength', min: 0, max: 1, step: 0.01 })
-  pane.addBinding(params, 'speed', { label: 'Speed', min: -5, max: 5, step: 0.1 })
-  pane.addBinding(params, 'vertical', { label: 'Direction', options: { Horizontal: false, Vertical: true } })
-  pane.addBinding(params, 'enabled', { label: 'Enabled' })
+  // どのデモでも Enabled → Paused → 各パラメーターの順に並べる。
+  const entries = Object.entries(paramDefs)
+  // ラベルはシェーダー内の uniform 名と同じにする。
+  const addParam = ([key, { value: _, ...options }]: (typeof entries)[number]) =>
+    pane.addBinding(params, key, { ...options, label: uniformName(key) })
+  entries.filter(([key]) => key === 'enabled').forEach(addParam)
   pane.addBinding(params, 'paused', { label: 'Paused' })
+  entries.filter(([key]) => key !== 'enabled').forEach(addParam)
   pane.addButton({ title: 'Reset' }).on('click', () => {
-    Object.assign(params, defaults)
+    Object.assign(params, defaults, { paused: false })
     uniforms.uTime.value = 0
+    clearTargets()
     pane.refresh()
   })
   // Slidevはスライド全体をCSSのtransformで拡大縮小するので、clientWidthではなく
@@ -69,7 +115,11 @@ onMounted(() => {
     const w = Math.max(1, Math.round(rect.width * dpr))
     const h = Math.max(1, Math.round(rect.height * dpr))
     const canvas = renderer.domElement
-    if (canvas.width !== w || canvas.height !== h) renderer.setSize(w, h, false)
+    if (canvas.width !== w || canvas.height !== h) {
+      renderer.setSize(w, h, false)
+      uniforms.uResolution.value.set(w, h)
+      for (const target of targets) target.setSize(w, h)
+    }
   }
   let visible = true
   const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting })
@@ -81,17 +131,15 @@ onMounted(() => {
     if (!visible || document.hidden) return
     syncSize()
     if (!params.paused) uniforms.uTime.value += dt
-    uniforms.uDensity.value = params.density
-    uniforms.uStrength.value = params.strength
-    uniforms.uSpeed.value = params.speed
-    uniforms.uVertical.value = params.vertical
-    uniforms.uEnabled.value = params.enabled
-    renderer.render(scene, camera)
+    for (const key of Object.keys(defaults)) uniforms[uniformName(key)].value = params[key]
+    render()
   })
   dispose = () => {
     renderer.setAnimationLoop(null)
     observer.disconnect(); pane.dispose()
-    geometry.dispose(); material.dispose(); texture.dispose(); renderer.dispose()
+    geometry.dispose(); material.dispose(); copyMaterial.dispose()
+    for (const target of targets) target.dispose()
+    texture.dispose(); renderer.dispose()
     renderer.domElement.remove()
   }
 })
@@ -105,11 +153,11 @@ onUnmounted(() => dispose())
       <div class="preview">
         <div ref="viewport" class="viewport"><p v-if="error" role="alert">{{ error }}</p></div>
         <div ref="controls" class="controls" @keydown.stop @pointerdown.stop @click.stop />
-        <p class="credit">Test card: "Philips PM5544" by ebnz, CC BY 2.5, via Wikimedia Commons</p>
+        <p v-if="testCard" class="credit">Test card: "Philips PM5544" by ebnz, CC BY 2.5, via Wikimedia Commons</p>
       </div>
     </div>
     <div class="code-column">
-      <div class="shader-code"><slot name="code" /></div>
+      <div class="shader-code" :style="codeFontSize ? { '--slidev-code-font-size': codeFontSize } : undefined"><div class="slidev-code-wrapper" v-html="codeHtml" /></div>
     </div>
   </div>
 </template>
@@ -126,6 +174,6 @@ onUnmounted(() => dispose())
 .code-column { min-width: 0; min-height: 0; }
 .shader-code { height: 100%; }
 .shader-code :deep(.slidev-code-wrapper) { height: 100%; }
-.shader-code :deep(pre) { display: block; height: 100%; box-sizing: border-box; font-size: 12px; line-height: 1.5; overflow: auto; }
+.shader-code :deep(pre) { display: block; height: 100%; box-sizing: border-box; overflow: auto; }
 .controls { position: absolute; top: 8px; right: 8px; z-index: 1; width: 256px; transform: scale(.75); transform-origin: top right; }
 </style>

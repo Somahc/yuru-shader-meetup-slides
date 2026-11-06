@@ -28,6 +28,10 @@
   margin-bottom: 16px;
 }
 
+.profile-description li li {
+  margin-bottom: 4px;
+}
+
 .profile-image {
   position: absolute;
   inset: 0 0 0 50%;
@@ -44,6 +48,33 @@
   border-radius: 50%;
   object-fit: cover;
   object-position: center;
+}
+
+.edgerunners-description {
+  width: 55%;
+  padding-top: 32px;
+}
+
+.edgerunners-description li {
+  margin-bottom: 16px;
+}
+
+.edgerunners-description li li {
+  margin-bottom: 4px;
+}
+
+.edgerunners-image {
+  position: absolute;
+  inset: 0 0 0 55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edgerunners-image img {
+  height: 460px;
+  width: auto;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
 }
 
 .slidev-page .slidev-layout ul {
@@ -96,4 +127,22 @@
   height: 100%;
   object-fit: contain;
   justify-self: center;
+}
+
+.yuru-video {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.yuru-video video {
+  display: block;
+  height: 320px;
+  width: auto;
+}
+
+.slidev-layout .yuru-video-caption {
+  margin-top: 16px;
+  font-size: 1.5em;
+  font-weight: 700;
 }

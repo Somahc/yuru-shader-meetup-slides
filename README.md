@@ -5,7 +5,7 @@
 走査線のデモでは、Three.jsの実行結果とfragment shaderを並べて表示します。
 Tweakpaneで密度・強さ・速度・向きを変更でき、エフェクトのON/OFF、一時停止、リセットにも対応しています。
 
-シェーダーは`shaders/scanlines.frag`、デモの実装は`components/ScanlineDemo.vue`にあります。
+シェーダーは`shaders/scanlines.frag`、デモの実装は`components/ShaderDemo.vue`（デモごとの設定は`components/demos.ts`）にあります。
 
 ## 素材のクレジット
 
