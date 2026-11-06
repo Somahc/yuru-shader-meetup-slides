@@ -4,21 +4,12 @@ uniform float uAmount;
 uniform float uGain;
 uniform float uDuration;
 uniform bool uEnabled;
+uniform bool uScanlines;
 varying vec2 vUv;
 
-const float tau = acos(-1.) * 2.;
+const float pi = acos(-1.);
+const float tau = pi * 2.;
 mat2 rot(float a) { float s = sin(a), c = cos(a); return mat2(c, s, -s, c); }
-
-const mat3 ycc2rgb = mat3(
-  1.0,    1.0,    1.0,
-  0.0,   -0.344,  1.773,
-  1.403, -0.714,  0.0
-);
-const mat3 rgb2ycc = mat3(
-  0.299, -0.168936,  0.499413,
-  0.587, -0.330468, -0.418931,
-  0.114,  0.499704, -0.081282
-);
 
 float rand(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
@@ -58,6 +49,17 @@ vec3 fillBands(vec2 uv, float time, vec2 fragCoord) {
 }
 
 // #region main
+const mat3 ycc2rgb = mat3(
+  1.0,    1.0,    1.0,
+  0.0,   -0.344,  1.773,
+  1.403, -0.714,  0.0
+);
+const mat3 rgb2ycc = mat3(
+  0.299, -0.168936,  0.499413,
+  0.587, -0.330468, -0.418931,
+  0.114,  0.499704, -0.081282
+);
+
 void main() {
   vec3 col = fillBands(vUv, uTime, gl_FragCoord.xy);
 
@@ -66,7 +68,7 @@ void main() {
 
   // 色差 (Cb, Cr) を Cr に応じた角度で回転し、uGain 倍に強める
   // → 毎フレーム色相が回り、彩度が上がっていく
-  ycc.yz *= rot(ycc.z / 16.0 * tau) * uGain;
+  ycc.yz *= rot(ycc.z * tau) * uGain;
   vec3 back = ycc2rgb * ycc;
 
   // uDuration 秒だけフィードバックを掛け、1秒休んで元に戻す
@@ -74,6 +76,13 @@ void main() {
   float feedbackMask = (uEnabled && localTime < uDuration) ? 1.0 : 0.0;
 
   col = mix(col, back, uAmount * feedbackMask);
+
+  // 縦の走査線（reference と同じ設定）。出力に掛けるので、次のフレームのフィードバックにも入る
+  // reference と同じく、フィードバック開始から 0.1 秒と、終わる 0.1 秒前から休みの間だけ掛ける
+  float scan = sin(vUv.x * 500.0 * pi + uTime * 3.0);
+  bool scanTime = localTime < 0.1 || localTime > uDuration - 0.1;
+  col *= (uScanlines && scanTime) ? mix(1.0, (scan + 1.0) / 2.0, 0.3) + 0.1 : 1.0;
+
   gl_FragColor = vec4(col, 1.0);
 }
 // #endregion main

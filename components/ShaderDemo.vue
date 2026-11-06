@@ -3,17 +3,19 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { Pane } from 'tweakpane'
 import { drawPM5544 } from './pm5544'
+import { drawFontAtlas } from './fontAtlas'
 import { demos, type Demo, type DemoName } from './demos'
 import { extractRegion, highlightGlsl } from './highlight'
 
 // codeFontSize: コード欄の文字サイズ（例: "11px"）。省略すると Slidev の既定値。
 // Slidev は .slidev-code の font-size を !important で変数から決めるので、変数のほうを差し替える。
-const props = defineProps<{ demo: DemoName, codeFontSize?: string }>()
+// hideCode: コード欄を出さず、映像だけを大きく表示する。
+const props = defineProps<{ demo: DemoName, codeFontSize?: string, hideCode?: boolean }>()
 const viewport = ref<HTMLDivElement>()
 const controls = ref<HTMLDivElement>()
 const error = ref('')
 const codeHtml = ref('')
-const { shader: fragmentShader, params: paramDefs, feedback = false, testCard = true }: Demo = demos[props.demo]
+const { shader: fragmentShader, params: paramDefs, feedback = false, testCard = true, font = false }: Demo = demos[props.demo]
 const defaults: Record<string, number | boolean> = Object.fromEntries(
   Object.entries(paramDefs).map(([key, def]) => [key, def.value]),
 )
@@ -22,7 +24,7 @@ const uniformName = (key: string) => `u${key[0].toUpperCase()}${key.slice(1)}`
 let dispose = () => {}
 
 // 右側に表示するコード。シェーダーの `#region main` の範囲だけを出す。
-highlightGlsl(extractRegion(fragmentShader, 'main')).then((html) => { codeHtml.value = html })
+if (!props.hideCode) highlightGlsl(extractRegion(fragmentShader, 'main')).then((html) => { codeHtml.value = html })
 
 onMounted(() => {
   let renderer: THREE.WebGLRenderer
@@ -45,8 +47,19 @@ onMounted(() => {
   drawPM5544(source.getContext('2d')!, source.width, source.height)
     .then(() => { texture.needsUpdate = true })
     .catch((e: Error) => { error.value = e.message })
+  // 文字テクスチャ。使うデモのときだけ作る。
+  let fontTexture: THREE.CanvasTexture | null = null
+  if (font) {
+    const atlas = document.createElement('canvas')
+    atlas.width = atlas.height = 1024
+    drawFontAtlas(atlas.getContext('2d')!, atlas.width)
+    fontTexture = new THREE.CanvasTexture(atlas)
+    // マスの境目で隣の文字が混ざらないよう、ミップマップは使わない。
+    fontTexture.generateMipmaps = false
+    fontTexture.minFilter = THREE.LinearFilter
+  }
   const uniforms: Record<string, THREE.IUniform> = {
-    uSource: { value: texture }, uTime: { value: 0 },
+    uSource: { value: texture }, uFont: { value: fontTexture }, uTime: { value: 0 },
     uResolution: { value: new THREE.Vector2(1, 1) }, uBackbuffer: { value: null },
     ...Object.fromEntries(Object.keys(defaults).map(key => [uniformName(key), { value: params[key] }])),
   }
@@ -139,7 +152,7 @@ onMounted(() => {
     observer.disconnect(); pane.dispose()
     geometry.dispose(); material.dispose(); copyMaterial.dispose()
     for (const target of targets) target.dispose()
-    texture.dispose(); renderer.dispose()
+    texture.dispose(); fontTexture?.dispose(); renderer.dispose()
     renderer.domElement.remove()
   }
 })
@@ -147,7 +160,7 @@ onUnmounted(() => dispose())
 </script>
 
 <template>
-  <div class="demo-grid">
+  <div class="demo-grid" :class="{ 'hide-code': hideCode }">
     <div class="preview-column">
       <slot name="intro" />
       <div class="preview">
@@ -155,8 +168,9 @@ onUnmounted(() => dispose())
         <div ref="controls" class="controls" @keydown.stop @pointerdown.stop @click.stop />
         <p v-if="testCard" class="credit">Test card: "Philips PM5544" by ebnz, CC BY 2.5, via Wikimedia Commons</p>
       </div>
+      <slot name="caption" />
     </div>
-    <div class="code-column">
+    <div v-if="!hideCode" class="code-column">
       <div class="shader-code" :style="codeFontSize ? { '--slidev-code-font-size': codeFontSize } : undefined"><div class="slidev-code-wrapper" v-html="codeHtml" /></div>
     </div>
   </div>
@@ -175,5 +189,9 @@ onUnmounted(() => dispose())
 .shader-code { height: 100%; }
 .shader-code :deep(.slidev-code-wrapper) { height: 100%; }
 .shader-code :deep(pre) { display: block; height: 100%; box-sizing: border-box; overflow: auto; }
+/* コードを出さないときは、映像を中央に大きく置く。 */
+.demo-grid.hide-code { grid-template-columns: 1fr; }
+.hide-code .preview-column { justify-content: center; }
+.hide-code .preview { width: 680px; max-width: 100%; margin: 0 auto; }
 .controls { position: absolute; top: 8px; right: 8px; z-index: 1; width: 256px; transform: scale(.75); transform-origin: top right; }
 </style>

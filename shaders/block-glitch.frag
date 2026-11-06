@@ -2,8 +2,10 @@ uniform sampler2D uSource;
 uniform float uTime;
 uniform vec2 uResolution;
 uniform float uAmount;
-uniform float uScale;
 uniform bool uInvert;
+uniform float uRate;        // 1秒間にブロックを作り直す回数
+uniform float uLacunarity;  // オクターブごとのブロックの縮尺（0.5 で2倍の大きさに）
+uniform float uPersistence; // オクターブごとのずれ量の倍率（0.5 で半分に）
 uniform bool uEnabled;
 varying vec2 vUv;
 
@@ -18,10 +20,10 @@ uvec3 hash3u(uvec3 v) {
 
 // #region main
 vec2 getNoise(vec2 p, float amount) {
-  const vec2 BLOCK_SIZE = vec2(2., .5);
-  const float RATE = 30.0;       // 1秒間に30回ブロックを作り直す
-  const float LACUNARITY = 0.5;  // オクターブごとにブロックを2倍の大きさに
-  const float PERSISTENCE = .5;  // オクターブごとにずれ量を半分に
+  const vec2 BLOCK_SIZE = vec2(0.8, 0.1);
+  float RATE = uRate;               // 1秒間にブロックを作り直す回数
+  float LACUNARITY = uLacunarity;   // 0.5 ならオクターブごとにブロックを2倍の大きさに
+  float PERSISTENCE = uPersistence; // 0.5 ならオクターブごとにずれ量を半分に
 
   vec2 sum = vec2(0.0);
   float amp = 1.0;
@@ -48,7 +50,7 @@ vec2 getNoise(vec2 p, float amount) {
 void main() {
   vec2 asp = uResolution / min(uResolution.x, uResolution.y);
   vec2 suv = (vUv * 2.0 - 1.0) * asp;
-  vec2 noise = uEnabled ? getNoise(suv, uAmount) * uScale : vec2(0.0);
+  vec2 noise = uEnabled ? getNoise(suv, uAmount) : vec2(0.0);
 
   // RGB ごとにずらす量を変えて、色ずれを作る
   vec3 col = vec3(

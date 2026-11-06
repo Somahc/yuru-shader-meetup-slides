@@ -115,17 +115,18 @@ class: text-center
 # それっぽいの作ってみました
 
 ---
-layout: center
-class: text-center
+layout: default
 ---
 
-<div class="yuru-video">
-  <SlidevVideo :autoplay="true" autoreset="slide" muted loop playsinline preload="auto">
-    <source src="/images/edgerunners_yuru.mov" />
-  </SlidevVideo>
-</div>
+<ShaderDemo demo="final" hide-code>
+
+<template #caption>
 
 <p class="yuru-video-caption">コレの話をします</p>
+
+</template>
+
+</ShaderDemo>
 
 ---
 layout: default
@@ -167,8 +168,8 @@ layout: default
 
 # 走査線
 
-- 周期的な明暗を重ねる。密度と強さで、画面の質感が変わる。
-- test
+- 三角関数で周期的な明暗模様を作る
+  - 元の色に乗算
 
 </template>
 
@@ -231,16 +232,16 @@ layout: default
 layout: default
 ---
 
-<ShaderDemo demo="shift">
+<ShaderDemo demo="shift" code-font-size="11px">
 
 <template #intro>
 
-# 映像が横に流れる演出
+# ここまでの組み合わせ
 
-- 3つを組み合わせるとこんな感じ
-  - 細かい横帯のグリッチ
-  - 画面を帯に分けて右へ流す
-  - 流れる映像の端をギザギザにする
+- 流れる直前に点滅させ、流れ始めたら走査線を重ねる
+  - 点滅
+  - 走査線
+  - 映像が横に流れる演出（横帯のグリッチ・帯ごとの移動・ギザギザの端）
 
 </template>
 
@@ -256,8 +257,9 @@ layout: default
 
 # Video Feedback
 
-- 前フレームの出力を読み、今のフレームに混ぜる
+- [some of live coding(Renard)](https://www.shadertoy.com/view/tX3yDX) 参照
 - YCbCrに変換し、色差だけを回転・増幅して色相を回す
+- 前フレームの出力を読み、今のフレームに混ぜる
 
 </template>
 
@@ -273,9 +275,10 @@ layout: default
 
 # Block Displacement Glitch
 
-- ブロックごとの乱数で、読み取る位置をずらす
-- 大きさの違うブロックを5段重ねる
-- RGBごとにずれ幅を変えて色ずれを作る
+- [Block Displacement Glitch(0b5vr)](https://scrapbox.io/0b5vr/Block_Displacement_Glitch) 参照
+- ブロック状のフラクタルノイズを作成
+- ノイズでRGBAの座標をずらしてサンプル
+  - 色ずれ
 
 </template>
 
@@ -297,3 +300,25 @@ layout: default
 </template>
 
 </ShaderDemo>
+
+---
+layout: default
+---
+
+<ShaderDemo demo="final" hide-code>
+
+<template #intro>
+
+# 完成
+
+</template>
+
+</ShaderDemo>
+
+---
+layout: center
+class: text-center
+---
+
+ご清聴ありがとうございました
+# Cyberpunk: Edgerunnersみよう！

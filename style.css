@@ -129,20 +129,9 @@
   justify-self: center;
 }
 
-.yuru-video {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.yuru-video video {
-  display: block;
-  height: 320px;
-  width: auto;
-}
-
 .slidev-layout .yuru-video-caption {
   margin-top: 16px;
+  text-align: center;
   font-size: 1.5em;
   font-weight: 700;
 }

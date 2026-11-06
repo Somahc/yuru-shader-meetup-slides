@@ -4,6 +4,8 @@ uniform float uSpeed;
 uniform bool uEnabled;
 varying vec2 vUv;
 
+const float pi = acos(-1.);
+
 float rand(vec2 p) {
   return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
@@ -16,7 +18,8 @@ void main() {
   // 2.5秒周期でループし、0.5秒たったら演出を始める
   float t = uTime * uSpeed;
   float cycle = floor(t / 2.5);
-  float glitchTime = uEnabled ? max(0.0, mod(t, 2.5) - 0.5) : 0.0;
+  float localTime = mod(t, 2.5);
+  float glitchTime = uEnabled ? max(0.0, localTime - 0.5) : 0.0;
 
   vec2 glitchUV = uv;
 
@@ -57,6 +60,18 @@ void main() {
   // 画面外に出た部分は黒
   float visible = step(0.0, glitchUV.x) * step(glitchUV.x, 1.0);
   vec3 col = texture2D(uSource, clamp(glitchUV, 0.0, 1.0)).rgb * visible;
+
+  // ---- 走査線 ----
+  // 演出が始まると 0.1 秒でフェードインする縦縞
+  float startup = smoothstep(0.0, 0.1, glitchTime);
+  float scan = sin(uv.x * 500.0 * pi + uTime * 3.0);
+  col *= uEnabled ? mix(1.0, (scan + 1.0) / 2.0, 0.3 * startup) + 0.1 : 1.0;
+
+  // ---- 点滅 ----
+  // 流れ始める直前から 0.4 秒間だけ、明るさを激しく揺らす
+  float flickerRand = rand(vec2(floor(t * 120.0), cycle + 137.0));
+  bool flickering = uEnabled && localTime >= 0.41 && localTime < 0.8;
+  col *= 1.0 + (flickerRand * 2.0 - 1.0) * (flickering ? 0.45 : 0.0);
 
   gl_FragColor = vec4(col, 1.0);
 }

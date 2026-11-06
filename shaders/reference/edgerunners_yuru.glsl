@@ -1,5 +1,5 @@
 // Cyberpunk: Edgerunners 風の演出（edgerunners_yuru.mov の元になった Shadertoy シェーダー）。
-// スライドで解説する内容の参照用。デモでは直接読み込んでいない。
+// スライドで解説する内容の参照用。最後のスライドの完成版デモでは、このファイルをそのまま読み込んで動かす。
 //
 // Shadertoy のチャンネル構成:
 //   iChannel0: このバッファ自身（前フレーム。Video Feedback 用）
@@ -38,7 +38,7 @@ float drawChar(vec2 p, float ascii)
 
     vec2 cell = vec2(
         mod(ascii, 16.0),
-        15.0 - floor(ascii / 16.0)%
+        15.0 - floor(ascii / 16.0)
     );
 
     vec2 atlasUV = (cell + p) / 16.0;
@@ -90,7 +90,7 @@ vec2 getNoise(vec2 p, float amount) {
     amp *= PERSISTENCE;
     p *= LACUNARITY;
   }
-
+  
   return sum;
 }
 
@@ -113,7 +113,7 @@ float titleMask(vec2 uv, float titleTime)
     );
 
     float mask = 0.0;
-
+    
     for (int i = 0; i < 11; i++)
     {
         float ascii = 32.0;
@@ -165,8 +165,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     float glitchTime = max(0.0, localTime - 0.6);
 
     vec2 glitchUV = uv;
-
-
+    
+    
     float _NoiseY = 0.3;
     if (screenUV.y > _NoiseY && screenUV.y < _NoiseY + 0.3)
     {
@@ -300,11 +300,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // ----------------------------------------
 
     float fillUV = glitchUV.x + baseDisplacement;
-
+    
     // 8分割で色を決定
     float fillBlockCount = 8.0;
     float fillBlockID = floor(screenUV.y * fillBlockCount);
-
+    
     // 0.06秒ごとにランダム更新
     float colorTime = floor(glitchTime / 0.06);
     float randomSeed = cycle * 137.0 + colorTime;
@@ -316,7 +316,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     vec3 yellow = vec3(1.0, 0.85, 0.0);
 
     vec3 fillColor = colorRand < 0.5 ? red : yellow;
-
+    
     // 横帯ごとのランダムな横幅（黒い領域の20〜80%）
     float fillLength = mix(
         0.2, 0.8,
@@ -337,23 +337,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     // 元画像が範囲外になった部分
     float blackArea = 1.0 - visible;
-
+    
 
     // 黒い部分を赤・黄色で90%覆う
     col = mix(col, fillColor, blackArea * fillMask * 0.9);
-
+    
     // ----------------------------------------
-    // Video Feedback
+    // Video Feedback?
+    // https://www.shadertoy.com/view/tX3yDX
     // ----------------------------------------
     vec3 back = vec3(0.), ycc = vec3(0.);
-    for(int i=0; i<16; i++)
-    {
-        vec3 y = rgb2ycc*texture(backbuffer, (suv/asp+1.) * .5).rgb/16.;
-        y.yz *= rot(y.z*tau)*1.1;
-        ycc += y;
-    }
+    vec3 y = rgb2ycc*texture(backbuffer, uv).rgb;
+    y.yz *= rot(y.z*tau)*1.15;
+    ycc += y;
     back = ycc2rgb*ycc;
-
+    
     // 赤黄色の表示開始から0.8秒後に有効化
     float feedbackStart = 0.8;
 
@@ -368,30 +366,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         ));
 
     col = mix(col, back, 0.95 * feedbackMask);
-
+    
     // Fine distortion
     float grain = rand(fragCoord + floor(iTime * 24.0) * 17.0);
     screenUV.x += (grain - 0.5) * 0.001;
-
+    
     // ----------------------------------------
     // YURU SHADER
     // ----------------------------------------
-
+    
     // 白背景に黒文字
     if(localTime >= 2.6)
     {
         float titleTime = localTime - 2.6;
 
         vec2 noise = getNoise(suv, 3. - localTime);
-
+        
         float r = titleMask(screenUV + noise * 0.4, titleTime);
         float g = titleMask(screenUV + noise * 0.5, titleTime);
         float b = titleMask(screenUV + noise * 0.6, titleTime);
-
-
+        
+        
         // 白背景に黒文字
         vec3 titleCol = vec3(1.0) - vec3(r, g, b);
-
+        
         // ノイズが発生している部分を判定
         float noiseMask = step(0.0001, length(noise));
 
@@ -399,8 +397,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         titleCol = mix(titleCol,1.0 - titleCol * 0.8,noiseMask);
         col = titleCol;
     }
-
-
+    
+    
     // ----------------------------------------
     // Display startup (0.0〜0.1秒)
     // ----------------------------------------
@@ -419,6 +417,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     if(localTime < 1.5 || localTime > 2.5) col *= scan;
     col *= brightness;
-
+    
     fragColor = vec4(col, 1.0);
 }
