@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { Pane } from 'tweakpane'
 import fragmentShader from '../shaders/scanlines.frag?raw'
+import { drawPM5544 } from './pm5544'
 
 const viewport = ref<HTMLDivElement>()
 const controls = ref<HTMLDivElement>()
@@ -20,42 +21,18 @@ onMounted(() => {
     return
   }
   viewport.value!.appendChild(renderer.domElement)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  // ローカルで生成する入力画像。ネットワークや外部素材を使わず比較できる。
+  // 入力画像。PM5544 のテストパターンを表示領域と同じ 16:9 に広げて描く。
   const source = document.createElement('canvas')
-  source.width = 960
-  source.height = 720
-  const ctx = source.getContext('2d')!
-  ctx.fillStyle = '#10172a'
-  ctx.fillRect(0, 0, 960, 720)
-  const colors = ['#f4eee1', '#e9ce43', '#55d7d2', '#6bc988', '#e776a7', '#dc644f', '#647aca']
-  colors.forEach((color, i) => {
-    ctx.fillStyle = color
-    ctx.fillRect(i * 960 / 7, 0, 960 / 7 + 1, 250)
-  })
-  const gradient = ctx.createLinearGradient(0, 0, 960, 0)
-  gradient.addColorStop(0, '#111827')
-  gradient.addColorStop(1, '#ffffff')
-  ctx.fillStyle = gradient
-  ctx.fillRect(0, 570, 960, 150)
-  ctx.strokeStyle = '#334155'
-  ctx.lineWidth = 2
-  for (let x = 0; x < 960; x += 48) {
-    ctx.beginPath(); ctx.moveTo(x, 250); ctx.lineTo(x, 570); ctx.stroke()
-  }
-  for (let y = 250; y <= 570; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(960, y); ctx.stroke()
-  }
-  ctx.fillStyle = '#eef2f6'
-  ctx.font = 'bold 100px monospace'
-  ctx.fillText('YURU', 52, 380)
-  ctx.fillText('SHADER', 52, 490)
-  ctx.beginPath(); ctx.arc(770, 410, 108, 0, Math.PI * 2)
-  ctx.fillStyle = '#5eead4'; ctx.fill()
-  ctx.beginPath(); ctx.arc(770, 410, 64, 0, Math.PI * 2)
-  ctx.fillStyle = '#10172a'; ctx.fill()
-
+  // 全画面表示でも引き伸ばされないよう、表示サイズより大きめに描く（SVGなので劣化しない）。
+  source.width = 2560
+  source.height = 1440
   const texture = new THREE.CanvasTexture(source)
+  // ミップマップを使うと細い線や縞がにじむので、元の解像度から直接補間する。
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
+  drawPM5544(source.getContext('2d')!, source.width, source.height)
+    .then(() => { texture.needsUpdate = true })
+    .catch((e: Error) => { error.value = e.message })
   const uniforms = {
     uSource: { value: texture }, uTime: { value: 0 },
     uDensity: { value: params.density }, uStrength: { value: params.strength },
@@ -83,11 +60,17 @@ onMounted(() => {
     uniforms.uTime.value = 0
     pane.refresh()
   })
-  const resize = new ResizeObserver(() => {
-    // Slidevの拡大縮小率に依存しない描画サイズ。
-    renderer.setSize(viewport.value!.clientWidth, viewport.value!.clientHeight, false)
-  })
-  resize.observe(viewport.value!)
+  // Slidevはスライド全体をCSSのtransformで拡大縮小するので、clientWidthではなく
+  // 実際に画面に表示されているサイズに合わせて描画解像度を決める。
+  // transformの変化はResizeObserverでは検知できないため、毎フレーム確認する。
+  const syncSize = () => {
+    const rect = viewport.value!.getBoundingClientRect()
+    const dpr = Math.min(window.devicePixelRatio, 2)
+    const w = Math.max(1, Math.round(rect.width * dpr))
+    const h = Math.max(1, Math.round(rect.height * dpr))
+    const canvas = renderer.domElement
+    if (canvas.width !== w || canvas.height !== h) renderer.setSize(w, h, false)
+  }
   let visible = true
   const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting })
   observer.observe(viewport.value!)
@@ -96,6 +79,7 @@ onMounted(() => {
     const dt = Math.min((now - previous) / 1000, 0.1)
     previous = now
     if (!visible || document.hidden) return
+    syncSize()
     if (!params.paused) uniforms.uTime.value += dt
     uniforms.uDensity.value = params.density
     uniforms.uStrength.value = params.strength
@@ -106,7 +90,7 @@ onMounted(() => {
   })
   dispose = () => {
     renderer.setAnimationLoop(null)
-    resize.disconnect(); observer.disconnect(); pane.dispose()
+    observer.disconnect(); pane.dispose()
     geometry.dispose(); material.dispose(); texture.dispose(); renderer.dispose()
     renderer.domElement.remove()
   }
@@ -121,6 +105,7 @@ onUnmounted(() => dispose())
       <div class="preview">
         <div ref="viewport" class="viewport"><p v-if="error" role="alert">{{ error }}</p></div>
         <div ref="controls" class="controls" @keydown.stop @pointerdown.stop @click.stop />
+        <p class="credit">Test card: "Philips PM5544" by ebnz, CC BY 2.5, via Wikimedia Commons</p>
       </div>
     </div>
     <div class="code-column">
@@ -136,6 +121,8 @@ onUnmounted(() => dispose())
 .viewport { width: 100%; aspect-ratio: 16 / 9; overflow: hidden; }
 .viewport :deep(canvas) { display: block; width: 100%; height: 100%; }
 .viewport p { padding: 20px; font-size: 14px; }
+/* レイアウトに影響しないよう、画像の下の余白に重ねて置く。 */
+.credit { position: absolute; top: 100%; right: 0; margin: 2px 0 0; font-size: 7px; line-height: 1.2; opacity: .5; white-space: nowrap; }
 .code-column { min-width: 0; min-height: 0; }
 .shader-code { height: 100%; }
 .shader-code :deep(.slidev-code-wrapper) { height: 100%; }

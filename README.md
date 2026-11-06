@@ -7,6 +7,12 @@ Tweakpaneで密度・強さ・速度・向きを変更でき、エフェクト�
 
 シェーダーは`shaders/scanlines.frag`、デモの実装は`components/ScanlineDemo.vue`にあります。
 
+## 素材のクレジット
+
+走査線のデモの入力画像には、次のテストパターンを16:9に広げて使っています。
+
+- `public/images/pm5544.svg`: ["Philips PM5544"](https://commons.wikimedia.org/wiki/File:Philips_PM5544.svg) by ebnz, [CC BY 2.5](https://creativecommons.org/licenses/by/2.5/), via Wikimedia Commons
+
 ## 起動
 
 ```sh
