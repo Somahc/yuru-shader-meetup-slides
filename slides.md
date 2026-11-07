@@ -8,6 +8,13 @@ fonts:
 layout: cover
 class: title-slide
 info: false
+# OGP。X などは相対パスの画像を読まないので、公開先の絶対 URL で指定する（画像は public/og-image.png）
+seoMeta:
+  ogTitle: 'シェーダーでCyberpunk: Edgerunners風の演出を作ってみた'
+  ogDescription: '2026/11/7 ゆるゆるシェーダー交流会 #2'
+  ogImage: https://somahc.github.io/yuru-shader-meetup-slides/og-image.png
+  ogUrl: https://somahc.github.io/yuru-shader-meetup-slides/
+  twitterCard: summary_large_image
 mdc: true
 ---
 
@@ -134,7 +141,7 @@ class: text-center
 layout: default
 ---
 
-<ShaderDemo demo="final" hide-code>
+<ShaderDemo demo="final" hide-code link="https://www.shadertoy.com/view/N3ySWR">
 
 <template #caption>
 
@@ -323,7 +330,7 @@ layout: default
 layout: default
 ---
 
-<ShaderDemo demo="final" hide-code>
+<ShaderDemo demo="final" hide-code link="https://www.shadertoy.com/view/N3ySWR">
 
 <template #intro>
 

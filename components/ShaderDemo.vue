@@ -10,7 +10,8 @@ import { extractRegion, highlightGlsl } from './highlight'
 // codeFontSize: コード欄の文字サイズ（例: "11px"）。省略すると Slidev の既定値。
 // Slidev は .slidev-code の font-size を !important で変数から決めるので、変数のほうを差し替える。
 // hideCode: コード欄を出さず、映像だけを大きく表示する。
-const props = defineProps<{ demo: DemoName, codeFontSize?: string, hideCode?: boolean }>()
+// link: 映像の左下に小さく出すリンク（Shadertoy の URL など）。
+const props = defineProps<{ demo: DemoName, codeFontSize?: string, hideCode?: boolean, link?: string }>()
 const viewport = ref<HTMLDivElement>()
 const controls = ref<HTMLDivElement>()
 const error = ref('')
@@ -166,6 +167,7 @@ onUnmounted(() => dispose())
       <div class="preview">
         <div ref="viewport" class="viewport"><p v-if="error" role="alert">{{ error }}</p></div>
         <div ref="controls" class="controls" @keydown.stop @pointerdown.stop @click.stop />
+        <a v-if="link" class="link" :href="link" target="_blank">{{ link }}</a>
         <p v-if="testCard" class="credit">Test card: "Philips PM5544" by ebnz, CC BY 2.5, via Wikimedia Commons</p>
       </div>
       <slot name="caption" />
@@ -185,6 +187,8 @@ onUnmounted(() => dispose())
 .viewport p { padding: 20px; font-size: 14px; }
 /* レイアウトに影響しないよう、画像の下の余白に重ねて置く。 */
 .credit { position: absolute; top: 100%; right: 0; margin: 2px 0 0; font-size: 7px; line-height: 1.2; opacity: .5; white-space: nowrap; }
+/* クレジットと同じく画像の下の余白に重ねて、左下に置く。 */
+.link { position: absolute; top: 100%; left: 0; margin-top: 2px; font-size: 10px; line-height: 1.2; opacity: .5; white-space: nowrap; }
 .code-column { min-width: 0; min-height: 0; }
 .shader-code { height: 100%; }
 .shader-code :deep(.slidev-code-wrapper) { height: 100%; }
