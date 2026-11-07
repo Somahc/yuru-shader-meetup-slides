@@ -8,6 +8,7 @@ import feedback from "../shaders/feedback.frag?raw";
 import blockGlitch from "../shaders/block-glitch.frag?raw";
 import grain from "../shaders/grain.frag?raw";
 import reference from "../shaders/reference/edgerunners_yuru.glsl?raw";
+import eventVisual from "../shaders/event-visual.glsl?raw";
 
 // Shadertoy 用のシェーダーを、そのままデモで動かせるようにする。
 // Shadertoy の変数を、デモが渡す uniform に置き換える。
@@ -132,6 +133,11 @@ export const demos = {
     shader: shadertoy(reference),
     feedback: true,
     font: true,
+    params: {},
+  },
+  eventVisual: {
+    shader: shadertoy(eventVisual),
+    testCard: false,
     params: {},
   },
 } satisfies Record<string, Demo>;

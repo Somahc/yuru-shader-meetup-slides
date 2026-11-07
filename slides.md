@@ -42,10 +42,24 @@ class: profile-slide
 
 ---
 layout: default
+---
+
+<ShaderDemo demo="eventVisual" hide-code>
+
+<template #intro>
+
+# 今回のイベントのこれ作りました
+
+</template>
+
+</ShaderDemo>
+
+---
+layout: default
 class: works-slide
 ---
 
-# こんなもの作ってます
+# こんなものも作ってます
 
 <div class="works-grid">
   <div class="work-panel">
