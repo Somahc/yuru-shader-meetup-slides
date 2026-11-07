@@ -5,6 +5,7 @@ uniform float uGain;
 uniform float uDuration;
 uniform bool uEnabled;
 uniform bool uScanlines;
+uniform bool uGrain;
 varying vec2 vUv;
 
 const float pi = acos(-1.);
@@ -77,9 +78,10 @@ void main() {
 
   col = mix(col, back, uAmount * feedbackMask);
 
-  // 縦の走査線（reference と同じ設定）。出力に掛けるので、次のフレームのフィードバックにも入る
-  // reference と同じく、フィードバック開始から 0.1 秒と、終わる 0.1 秒前から休みの間だけ掛ける
-  float scan = sin(vUv.x * 500.0 * pi + uTime * 3.0);
+  vec2 screenUV = vUv;
+  float grain = rand(gl_FragCoord.xy + floor(uTime * 24.0) * 17.0);
+  if (uGrain) screenUV.x += (grain - 0.5) * 0.001;
+  float scan = sin(screenUV.x * 500.0 * pi + uTime * 3.0);
   bool scanTime = localTime < 0.1 || localTime > uDuration - 0.1;
   col *= (uScanlines && scanTime) ? mix(1.0, (scan + 1.0) / 2.0, 0.3) + 0.1 : 1.0;
 

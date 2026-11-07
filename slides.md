@@ -11,6 +11,8 @@ info: false
 mdc: true
 ---
 
+<div class="title-note">\ネタバレなし/</div>
+
 # シェーダーでCyberpunk: Edgerunners風の演出を作ってみた
 
 <div class="title-event">2026/11/7 ゆるゆるシェーダー交流会 #2</div>
@@ -24,7 +26,7 @@ class: profile-slide
 
 <div class="profile-description">
 
-- Sigreni（@nimono_vr） / Somahc
+- Sigreni（[@nimono_vr](https://x.com/nimono_vr)） / Somahc
 - 株式会社ジュニでフロントエンドエンジニアとしてインターン（2024/6~）
   - 普段は大学院2年生として修論（やばい）
 - シェーダー歴は2年くらい
@@ -123,6 +125,7 @@ layout: default
 <template #caption>
 
 <p class="yuru-video-caption">コレの話をします</p>
+<p class="yuru-video-note">（なんか全然違うものになったが）</p>
 
 </template>
 
@@ -137,9 +140,9 @@ layout: default
 - 点滅
 - 走査線
 - 映像が横に流れる演出
-- Video Feedback（色がだんだん変わってくやつ）
-- Block Displacement Glitch
 - グレイン
+- Video Feedback
+- Block Displacement Glitch
 
 ---
 layout: default
@@ -185,8 +188,8 @@ layout: default
 
 # 細かい横帯のグリッチ
 
-- 15pxの帯のうち、一部の帯だけを選ぶ
-- 帯の中の一点の色で、右へ引き伸ばす
+- 高さ15pxのブロックのうち、一部だけを選ぶ
+- ブロックの中の一点の色で、右へ引き伸ばす
 - 伸ばす長さを2pxごとに変えて、端をバラつかせる
 
 </template>
@@ -201,10 +204,10 @@ layout: default
 
 <template #intro>
 
-# 画面を帯に分けて右へ流す
+# 画面を右へ流す
 
-- 画面を5本の帯に分け、帯ごとに移動距離を変える
-- 帯ごとに速さが違うので、バラバラに画面外へ流れていく
+- 画面を5つのブロックに分け、それぞれ移動距離を変える
+- ブロックごとに速さが違うので、バラバラに画面外へ
 - 画面外に出た部分は黒にする
 
 </template>
@@ -219,10 +222,10 @@ layout: default
 
 <template #intro>
 
-# 流れる映像の端をギザギザにする
+# 映像をギザギザにする
 
-- 数pxごとに、ずらす量をランダムに変える
-- 帯の端がまっすぐにならず、ガタついて見える
+- 一定ピクセルの高さのブロックに画面を分割
+- それぞれのブロックで横にランダムでずらす
 
 </template>
 
@@ -238,10 +241,27 @@ layout: default
 
 # ここまでの組み合わせ
 
-- 流れる直前に点滅させ、流れ始めたら走査線を重ねる
+- ここまでの演出を組み合わせる
   - 点滅
   - 走査線
-  - 映像が横に流れる演出（横帯のグリッチ・帯ごとの移動・ギザギザの端）
+  - 映像が横に流れる演出
+
+</template>
+
+</ShaderDemo>
+
+---
+layout: default
+---
+
+<ShaderDemo demo="grain">
+
+<template #intro>
+
+# グレイン
+
+- ピクセルごとの乱数で、読み取る位置を横にわずかに揺らす
+- 1秒に24回更新して、フィルムっぽいざらつきを出す
 
 </template>
 
@@ -258,8 +278,9 @@ layout: default
 # Video Feedback
 
 - [some of live coding(Renard)](https://www.shadertoy.com/view/tX3yDX) 参照
-- YCbCrに変換し、色差だけを回転・増幅して色相を回す
+- YCbCrに変換し、CbCrを回転・増幅して色相を回す
 - 前フレームの出力を読み、今のフレームに混ぜる
+  - 走査線とグレインを重ねたらいい感じになった
 
 </template>
 
@@ -288,23 +309,6 @@ layout: default
 layout: default
 ---
 
-<ShaderDemo demo="grain">
-
-<template #intro>
-
-# グレイン
-
-- ピクセルごとの乱数で、読み取る位置を横にわずかに揺らす
-- 1秒に24回更新して、フィルムっぽいざらつきを出す
-
-</template>
-
-</ShaderDemo>
-
----
-layout: default
----
-
 <ShaderDemo demo="final" hide-code>
 
 <template #intro>
@@ -320,5 +324,5 @@ layout: center
 class: text-center
 ---
 
+# 結論　Cyberpunk: Edgerunnersをみよう！
 ご清聴ありがとうございました
-# Cyberpunk: Edgerunnersみよう！

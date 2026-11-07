@@ -8,6 +8,10 @@
   margin: 0;
 }
 
+.title-note {
+  text-align: center;
+}
+
 .title-event {
   position: absolute;
   right: 32px;
@@ -134,4 +138,11 @@
   text-align: center;
   font-size: 1.5em;
   font-weight: 700;
+}
+
+.slidev-layout .yuru-video-note {
+  margin-top: 4px;
+  text-align: center;
+  font-size: 0.9em;
+  color: #888;
 }

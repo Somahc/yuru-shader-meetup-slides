@@ -105,6 +105,7 @@ export const demos = {
       gain: { value: 1.15, min: 0.9, max: 1.3, step: 0.01 },
       duration: { value: 1.2, min: 0.2, max: 5, step: 0.1 },
       scanlines: { value: true },
+      grain: { value: true },
       enabled: { value: true },
     },
   },
